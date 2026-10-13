@@ -1,4 +1,0 @@
---c99 --gnu -c --cpu Cortex-M3 -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I .\std_periph_driver\inc -I .\user -I .\my_lib -I .\my_lib\font -I .\my_lib\font\.h -I .\test --no-multibyte-chars
--I"D:\Keil5 MDK V5.37\Pack\Keil\STM32F1xx_DFP\2.4.0\Device\Include"
--D__UVISION_VERSION="537" -DSTM32F10X_MD
--o .\objects\stm32f10x_adc.o --omf_browse .\objects\stm32f10x_adc.crf --depend .\objects\stm32f10x_adc.d --feedback ".\Objects\template.fed" "std_periph_driver\src\stm32f10x_adc.c"
