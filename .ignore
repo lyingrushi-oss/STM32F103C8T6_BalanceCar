@@ -1,0 +1,32 @@
+# Keil MDK 编译生成文件
+*.uvoptx
+*.uvguix.*
+*.bak
+*.crf
+*.o
+*.d
+*.lst
+*.lnp
+*.map
+*.axf
+*.iex
+*.scvd
+*.dep
+*.tra
+
+# 编译输出文件夹
+Objects/
+Listings/
+Debug/
+DebugConfig/
+
+# VSCode本地配置日志（你的警告里出现的）
+.vscode/*.log
+# .vscode/c_cpp_properties.json 建议保留，方便你自己看代码，所以不屏蔽
+
+# 其他杂项
+*.hex
+*.bin
+JLinkLog.txt
+.RTE/
+.specstory/
