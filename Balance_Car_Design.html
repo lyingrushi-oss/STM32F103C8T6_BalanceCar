@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🛠️  STM32 平衡车 · 设计总结与复用手册</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg2:#161b22; --card:#1b2230; --card2:#212a3a;
+    --line:#2b3346; --text:#e6edf3; --muted:#9aa7b8; --accent:#39d3c3;
+    --accent2:#ffb454; --red:#ff6b6b; --blue:#5aa9ff; --green:#5ad17a;
+    --purple:#b083ff; --shadow:0 8px 24px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    line-height:1.75; font-size:15px;
+  }
+  /* ---------- 侧边栏 ---------- */
+  #sidebar{
+    position:fixed; top:0; left:0; width:288px; height:100vh;
+    background:linear-gradient(180deg,#10151f,#0d1117);
+    border-right:1px solid var(--line); padding:18px 14px 40px;
+    overflow-y:auto; z-index:20;
+  }
+  #sidebar h1{font-size:16px; margin:6px 8px 4px; color:var(--accent)}
+  #sidebar .sub{font-size:12px; color:var(--muted); margin:0 8px 14px}
+  #toc{list-style:none; margin:0; padding:0}
+  #toc .l1>a{
+    display:block; padding:7px 10px; border-radius:8px; color:var(--text);
+    text-decoration:none; font-weight:600; font-size:13.5px; transition:.15s;
+  }
+  #toc .l1>a:hover{background:var(--card2); color:var(--accent)}
+  #toc .l1>a.active{background:var(--card2); color:var(--accent); box-shadow:inset 3px 0 0 var(--accent)}
+  #toc .l2{list-style:none; margin:0; padding:0 0 4px 14px; display:none}
+  #toc .l1.open .l2{display:block}
+  #toc .l2 a{
+    display:block; padding:5px 10px; border-radius:6px; color:var(--muted);
+    text-decoration:none; font-size:12.5px; transition:.15s;
+  }
+  #toc .l2 a:hover{color:var(--text); background:var(--card)}
+  #toc .l2 a.active{color:var(--accent2)}
+  /* ---------- 主内容 ---------- */
+  #main{margin-left:288px; padding:46px 52px 120px; max-width:1080px}
+  header.hero{
+    background:linear-gradient(135deg,#16202e,#0f1620);
+    border:1px solid var(--line); border-radius:16px; padding:30px 34px;
+    box-shadow:var(--shadow); margin-bottom:34px;
+  }
+  header.hero h1{margin:0 0 8px; font-size:28px}
+  header.hero p{margin:4px 0; color:var(--muted)}
+  .tag{display:inline-block; background:var(--card2); border:1px solid var(--line);
+    color:var(--accent); padding:2px 10px; border-radius:20px; font-size:12px; margin:6px 6px 0 0}
+  section{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:26px 30px; margin:26px 0; box-shadow:var(--shadow);
+    scroll-margin-top:20px;
+  }
+  h2.sec{font-size:21px; margin:0 0 6px; border-bottom:2px solid var(--line);
+    padding-bottom:10px; display:flex; align-items:center; gap:10px}
+  h3.sub{font-size:16.5px; margin:24px 0 8px; color:var(--accent2);
+    border-left:4px solid var(--accent2); padding-left:10px}
+  p{margin:10px 0}
+  .lead{color:var(--muted)}
+  code{background:#0c1119; border:1px solid var(--line); border-radius:5px;
+    padding:1px 6px; font-family:"Cascadia Code",Consolas,monospace; font-size:13px; color:var(--accent)}
+  pre{background:#0a0e15; border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; font-size:12.8px; line-height:1.6}
+  pre code{background:none; border:none; padding:0; color:#cdd9e5}
+  .kw{color:#ff7b9c} .fn{color:#79c0ff} .num{color:#ffb454}
+  .cm{color:#6e7b8f; font-style:italic} .str{color:#7ee787}
+  .card-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; margin:16px 0}
+  .mini{background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+  .mini b{color:var(--accent)}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:13.5px}
+  th,td{border:1px solid var(--line); padding:8px 11px; text-align:left}
+  th{background:var(--card2); color:var(--accent)}
+  tr:nth-child(even) td{background:#141a24}
+  .warn{background:#2a1c1c; border:1px solid #5a2b2b; border-left:4px solid var(--red);
+    border-radius:10px; padding:12px 16px; margin:14px 0}
+  .warn b{color:var(--red)}
+  .tip{background:#15281f; border:1px solid #2c4a39; border-left:4px solid var(--green);
+    border-radius:10px; padding:12px 16px; margin:14px 0}
+  .tip b{color:var(--green)}
+  .box{background:var(--card2); border:1px dashed var(--line); border-radius:10px; padding:14px 18px; margin:14px 0}
+  .formula{background:#0a0e15; border:1px solid var(--line); border-radius:10px;
+    padding:14px 18px; text-align:center; font-size:16px; color:var(--accent); margin:14px 0}
+  svg{display:block; margin:18px auto; max-width:100%}
+  .cap{text-align:center; color:var(--muted); font-size:12.5px; margin-top:-6px}
+  #topBtn{position:fixed; right:26px; bottom:26px; width:46px; height:46px;
+    border-radius:50%; background:var(--accent); color:#04201d; border:none;
+    font-size:20px; cursor:pointer; box-shadow:var(--shadow); display:none; z-index:30}
+  #topBtn:hover{background:var(--accent2)}
+  footer{color:var(--muted); font-size:12.5px; text-align:center; margin-top:30px}
+  .pill{display:inline-block; background:var(--card2); border:1px solid var(--line);
+    border-radius:6px; padding:2px 8px; margin:2px; font-size:12px; color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ===================== 侧边栏目录 ===================== -->
+<nav id="sidebar">
+  <h1>🛠️ 平衡车设计手册</h1>
+  <p class="sub">STM32 · 架构与模块总览 · 复习 & 复用</p>
+  <ul id="toc">
+    <li class="l1"><a href="#overview">🎯 一、项目总览</a></li>
+    <li class="l1"><a href="#arch">🧩 二、整体架构</a>
+      <ul class="l2">
+        <li><a href="#arch-hw">2.1 硬件系统框图</a></li>
+        <li><a href="#arch-sw">2.2 软件分层</a></li>
+        <li><a href="#arch-loop">2.3 控制闭环</a></li>
+      </ul></li>
+    <li class="l1"><a href="#power">🔋 三、电源与电量</a>
+      <ul class="l2">
+        <li><a href="#power-adc">3.1 分压采集</a></li>
+        <li><a href="#power-led">3.2 电量指示</a></li>
+      </ul></li>
+    <li class="l1"><a href="#motor">🚗 四、电机驱动与PWM</a>
+      <ul class="l2">
+        <li><a href="#motor-tb">4.1 TB6612 驱动</a></li>
+        <li><a href="#motor-pwm">4.2 PWM 参数</a></li>
+        <li><a href="#motor-api">4.3 代码接口</a></li>
+      </ul></li>
+    <li class="l1"><a href="#encoder">📡 五、编码器测速</a>
+      <ul class="l2">
+        <li><a href="#enc-t">5.1 T 法原理</a></li>
+        <li><a href="#enc-bug">5.2 三个经典坑</a></li>
+      </ul></li>
+    <li class="l1"><a href="#mpu">🧭 六、MPU6050 姿态解算</a>
+      <ul class="l2">
+        <li><a href="#mpu-2">6.1 双传感器</a></li>
+        <li><a href="#mpu-cf">6.2 互补滤波</a></li>
+        <li><a href="#mpu-code">6.3 工程实现</a></li>
+      </ul></li>
+    <li class="l1"><a href="#pid">🎛️ 七、PID 控制器</a>
+      <ul class="l2">
+        <li><a href="#pid-alg">7.1 算法结构</a></li>
+        <li><a href="#pid-imp">7.2 工程改进</a></li>
+      </ul></li>
+    <li class="l1"><a href="#upright">🤸 八、直立环与倒立摆</a></li>
+    <li class="l1"><a href="#speed">⚡ 九、速度环与悖论</a></li>
+    <li class="l1"><a href="#rc">📱 十、蓝牙遥控</a></li>
+    <li class="l1"><a href="#lib">🧰 十一、支撑库总览</a></li>
+    <li class="l1"><a href="#timing">⏱️ 十二、时基与周期调度</a>
+      <ul class="l2">
+        <li><a href="#timing-delay">12.1 延时实现细节</a></li>
+        <li><a href="#timing-macro">12.2 宏的原理</a></li>
+      </ul></li>
+    <li class="l1"><a href="#tune">🎯 十三、调参实战步骤</a>
+      <ul class="l2">
+        <li><a href="#tune-principle">13.1 总原则</a></li>
+        <li><a href="#tune-steps">13.2 分步调参</a></li>
+        <li><a href="#tune-table">13.3 现象速查</a></li>
+      </ul></li>
+    <li class="l1"><a href="#appendix">📌 附录：速查表</a></li>
+  </ul>
+</nav>
+
+<button id="topBtn" title="回到顶部">↑</button>
+
+<!-- ===================== 主内容 ===================== -->
+<div id="main">
+
+  <header class="hero">
+    <h1>🛠️ STM32 平衡车 · 设计总结与复用手册</h1>
+    <p>这份文档按「整体架构 → 各功能模块」梳理了平衡车从传感器、控制算法到执行机构的完整设计，方便你日后复习与二开复用。</p>
+    <p class="lead">💡 阅读建议：先记住一句话——<b>“倒立摆靠加速度维持平衡，往哪倒就往哪加速”</b>，后面所有模块都是为这件事服务的。</p>
+    <div>
+      <span class="tag">MCU: STM32F10x</span>
+      <span class="tag">姿态: MPU6050</span>
+      <span class="tag">电机: TB6612 + 编码电机</span>
+      <span class="tag">算法: 互补滤波 + PID</span>
+      <span class="tag">通信: 软件I²C + 串口/蓝牙</span>
+    </div>
+  </header>
+
+  <!-- ============ 一、总览 ============ -->
+  <section id="overview">
+    <h2 class="sec">🎯 一、项目总览</h2>
+    <p class="lead">平衡车本质是一个<b>单级倒立摆 + 差速小车</b>。核心矛盾是：车体会自然倒下，而我们要让它“靠运动”保持直立。解决思路是<b>双闭环 PID</b>——内环（直立环）让它不倒，外环（速度环）让它按指令走。</p>
+    <div class="card-grid">
+      <div class="mini"><b>📥 感知</b><br>MPU6050 给出车身倾角，编码器给出轮速。</div>
+      <div class="mini"><b>🧠 决策</b><br>互补滤波融合角度；直立环 + 速度环双 PID 算输出。</div>
+      <div class="mini"><b>📤 执行</b><br>PWM 驱动 TB6612 → 电机；按键/蓝牙下发指令。</div>
+      <div class="mini"><b>🔌 保障</b><br>ADC 测电池电压 + LED 电量；调试串口回传数据。</div>
+    </div>
+    <p>代码采用<b>分层结构</b>：<code>user/</code> 是应用层（电池、按键、电机、串口），<code>my_lib/</code> 是通用驱动与算法库（PID、快速数学、软件 I²C、按钮、任务调度），<code>std_periph_driver/</code> 是 ST 官方标准外设库。这种分层让你换芯片或换电机时，只需改 <code>user/</code> 和少量库参数。</p>
+  </section>
+
+  <!-- ============ 二、整体架构 ============ -->
+  <section id="arch">
+    <h2 class="sec">🧩 二、整体架构</h2>
+
+    <h3 class="sub" id="arch-hw">2.1 硬件系统框图</h3>
+    <p>信号流向：<b>传感器 → MCU → 执行器</b>，同时 MCU 与“人/上位机”双向通信。下面这张图把整车的信号链画全了。</p>
+    <svg viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+      <defs>
+        <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#39d3c3"/>
+        </marker>
+        <marker id="ar2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#ffb454"/>
+        </marker>
+      </defs>
+      <!-- MCU 中心 -->
+      <rect x="270" y="135" width="140" height="90" rx="12" fill="#1b2230" stroke="#39d3c3" stroke-width="2"/>
+      <text x="340" y="168" fill="#e6edf3" font-size="15" text-anchor="middle" font-weight="bold">STM32</text>
+      <text x="340" y="190" fill="#9aa7b8" font-size="11" text-anchor="middle">控制大脑</text>
+      <text x="340" y="208" fill="#9aa7b8" font-size="10" text-anchor="middle">72MHz</text>
+      <!-- 传感器 -->
+      <rect x="20" y="40" width="130" height="48" rx="9" fill="#16202e" stroke="#5aa9ff"/>
+      <text x="85" y="69" fill="#cdd9e5" font-size="12" text-anchor="middle">🧭 MPU6050</text>
+      <rect x="20" y="155" width="130" height="48" rx="9" fill="#16202e" stroke="#5aa9ff"/>
+      <text x="85" y="184" fill="#cdd9e5" font-size="12" text-anchor="middle">📡 编码器×2</text>
+      <rect x="20" y="270" width="130" height="48" rx="9" fill="#16202e" stroke="#5aa9ff"/>
+      <text x="85" y="299" fill="#cdd9e5" font-size="12" text-anchor="middle">🔋 电池分压</text>
+      <!-- 执行/通信 -->
+      <rect x="530" y="40" width="130" height="48" rx="9" fill="#16202e" stroke="#ffb454"/>
+      <text x="595" y="69" fill="#cdd9e5" font-size="12" text-anchor="middle">🚗 TB6612+电机</text>
+      <rect x="530" y="155" width="130" height="48" rx="9" fill="#16202e" stroke="#ffb454"/>
+      <text x="595" y="184" fill="#cdd9e5" font-size="12" text-anchor="middle">📱 蓝牙/USART3</text>
+      <rect x="530" y="270" width="130" height="48" rx="9" fill="#16202e" stroke="#ffb454"/>
+      <text x="595" y="299" fill="#cdd9e5" font-size="12" text-anchor="middle">💻 USART2调试</text>
+      <!-- 输入 -->
+      <rect x="270" y="285" width="140" height="42" rx="9" fill="#16202e" stroke="#5ad17a"/>
+      <text x="340" y="311" fill="#cdd9e5" font-size="12" text-anchor="middle">🔘 按键 + LED电量</text>
+
+      <line x1="150" y1="64" x2="270" y2="150" stroke="#5aa9ff" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="150" y1="179" x2="270" y2="180" stroke="#5aa9ff" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="150" y1="294" x2="270" y2="195" stroke="#5aa9ff" stroke-width="2" marker-end="url(#ar)"/>
+      <line x1="410" y1="165" x2="530" y2="64" stroke="#ffb454" stroke-width="2" marker-end="url(#ar2)"/>
+      <line x1="410" y1="175" x2="530" y2="179" stroke="#ffb454" stroke-width="2" marker-end="url(#ar2)"/>
+      <line x1="410" y1="190" x2="530" y2="294" stroke="#ffb454" stroke-width="2" marker-end="url(#ar2)"/>
+      <line x1="340" y1="225" x2="340" y2="285" stroke="#5ad17a" stroke-width="2" marker-end="url(#ar)"/>
+    </svg>
+    <p class="cap">图 2-1　硬件信号链：蓝色为“输入/感知”，橙色为“输出/执行”，绿色为“人机交互”</p>
+
+    <h3 class="sub" id="arch-sw">2.2 软件分层</h3>
+    <svg viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+      <rect x="40" y="20" width="600" height="42" rx="9" fill="#212a3a" stroke="#39d3c3"/>
+      <text x="60" y="46" fill="#e6edf3" font-size="13">🟩 应用层 user/　app_pwm · app_bat · app_button · app_usart2 · main.c</text>
+      <rect x="40" y="78" width="600" height="42" rx="9" fill="#1b2230" stroke="#5aa9ff"/>
+      <text x="60" y="104" fill="#e6edf3" font-size="13">🟦 驱动/算法库 my_lib/　pid · qmath · si2c · usart · button · task · oled · spi</text>
+      <rect x="40" y="136" width="600" height="42" rx="9" fill="#161b22" stroke="#9aa7b8"/>
+      <text x="60" y="162" fill="#9aa7b8" font-size="13">⬜ 标准外设库 std_periph_driver/　+ startup 启动文件　→　硬件</text>
+      <path d="M120,62 L120,78" stroke="#39d3c3" stroke-width="2"/>
+      <path d="M120,120 L120,136" stroke="#5aa9ff" stroke-width="2"/>
+    </svg>
+    <p class="cap">图 2-2　三层软件架构：上层调用下层，下层不依赖上层</p>
+
+    <h3 class="sub" id="arch-loop">2.3 控制闭环</h3>
+    <p>两个环串在一起，速度环的输出“叠加”到直立环的设定值上，最终共同决定电机 PWM：</p>
+    <div class="formula">编码器速度 → 速度环PID → 叠加 → 直立环PID(角度) → 电机PWM → 车体运动 → 反馈</div>
+    <div class="box">
+      <b>记住口诀：</b><br>
+      ① 直立环管“<b>不倒</b>”——角度偏差多大，就给多大扭力把它扶回来；<br>
+      ② 速度环管“<b>走多快</b>”——它不直接驱车，而是“偷偷”修改直立环的平衡点，让车为了找回平衡而前进/后退。
+    </div>
+  </section>
+
+  <!-- ============ 三、电源 ============ -->
+  <section id="power">
+    <h2 class="sec">🔋 三、电源与电量指示</h2>
+    <p class="lead">源码：<code>user/app_bat.c</code>。两节锂电串联 ≈ 8.4V，单片机 ADC 只能吃 0–3.3V，所以必须先分压再采样。</p>
+
+    <h3 class="sub" id="power-adc">3.1 分压采集</h3>
+    <p>电池正极经 <b>3.3k + 5.1k</b> 电阻分压，最大分压 = 8.4 × 5.1/(3.3+5.1) ≈ 3.3V，刚好不烧引脚。ADC 用 <b>注入通道</b>（CH8 / PB0），由 <b>TIM2 的 TRGO 更新事件每 1ms 触发一次</b>转换，JEOC 中断里读数。</p>
+    <div class="formula">vbat = JDR1 / 4095 × 3.3 × (8.4 / 3.3) = JDR1 / 4095 × 8.4</div>
+    <pre><code><span class="cm">// ADC1_2_IRQHandler 中：TIM2 触发 → 读出注入值 → 换算电压</span>
+<span class="kw">uint16_t</span> jdr1 = <span class="fn">ADC_GetInjectedConversionValue</span>(ADC1, ADC_InjectedChannel_1);
+vbat = jdr1 / <span class="num">4095.0f</span> * <span class="num">3.3</span> * <span class="num">8.4f</span> / <span class="num">3.3</span>;  <span class="cm">// ≈ jdr1/4095*8.4</span></code></pre>
+
+    <h3 class="sub" id="power-led">3.2 电量指示</h3>
+    <p>三颗 LED（PA4 / PA5 / PA6）按电压分档显示，低于阈值时进入<b>快闪模式</b>提醒充电。</p>
+    <table>
+      <tr><th>电压 vbat</th><th>显示</th><th>含义</th></tr>
+      <tr><td>&gt; 7.9 V</td><td>💡💡💡 三颗亮</td><td>电量充足</td></tr>
+      <tr><td>&gt; 7.4 V</td><td>💡💡 两颗亮</td><td>较充足</td></tr>
+      <tr><td>&gt; 7.0 V</td><td>💡 一颗亮</td><td>偏低</td></tr>
+      <tr><td>&gt; 6.5 V</td><td>🌑 全灭</td><td>需充电</td></tr>
+      <tr><td>≤ 6.5 V</td><td>⚡ 快闪</td><td>亏电报警</td></tr>
+    </table>
+    <div class="tip"><b>✅ 裸机技巧：</b>快闪用<b>状态机 + 时间戳</b>实现，绝不写 <code>delay()</code> 阻塞。每进一次 <code>App_Bat_Proc()</code>，用 <code>GetTick()</code> 判断距上次翻转是否 &gt; 100ms，才切换 stage。这样主循环始终能响应其他任务。</div>
+  </section>
+
+  <!-- ============ 四、电机 ============ -->
+  <section id="motor">
+    <h2 class="sec">🚗 四、电机驱动与 PWM</h2>
+    <p class="lead">源码：<code>user/app_pwm.c</code>。单片机引脚带不动电机，必须靠 <b>TB6612（H 桥驱动）</b>，单片机只输出 PWM 和逻辑电平。</p>
+
+    <h3 class="sub" id="motor-tb">4.1 TB6612 驱动</h3>
+    <p>TB6612 内部是 4 个 MOS 管组成的 H 桥，靠两路逻辑（AIN1/AIN2）控制正反转，靠 STBY 控制休眠，靠 PWM 引脚占空比控制“等效电压大小”。</p>
+    <table>
+      <tr><th>功能</th><th>引脚</th><th>说明</th></tr>
+      <tr><td>STBY 使能</td><td>PA1</td><td>高=工作，低=休眠</td></tr>
+      <tr><td>左轮 AIN1/AIN2</td><td>PA9 / PA10</td><td>正反转逻辑</td></tr>
+      <tr><td>左轮 PWM（PWMA）</td><td>PA8 = TIM1_CH1</td><td>占空比→电压</td></tr>
+      <tr><td>右轮 BIN1/BIN2</td><td>PB5 / PB7</td><td>正反转逻辑</td></tr>
+      <tr><td>右轮 PWM（PWMB）</td><td>PB6 = TIM4_CH4</td><td>占空比→电压</td></tr>
+    </table>
+    <div class="box">正反转真值表：<span class="pill">AIN1=1, AIN2=0 → 正转</span><span class="pill">AIN1=0, AIN2=1 → 反转</span><br>左右轮<b>对称</b>：车要前进时，一轮正转、另一轮必须反转（代码里交换正反转逻辑）。</div>
+
+    <h3 class="sub" id="motor-pwm">4.2 PWM 参数</h3>
+    <p>用定时器<b>输出比较 PWM1 模式</b>：计数器 CNT &lt; CCR 时输出高。参数选取原则——</p>
+    <div class="card-grid">
+      <div class="mini"><b>分辨率 = 1000</b><br>ARR = 999，最小占空比 0.1%，调速细腻。</div>
+      <div class="mini"><b>频率尽量高</b><br>PSC = 0 → 72MHz/1000 = <b>72 kHz</b>。频率越高，电感平滑电流越好，接近直流。</div>
+      <div class="mini"><b>占空比计算</b><br>CCR = duty/100 × 999；等效电压 Ua = Vbat × duty。</div>
+    </div>
+    <svg viewBox="0 0 680 150" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+      <text x="10" y="22" fill="#9aa7b8" font-size="12">PWM 波形（占空比↑ = 高电平更宽 = 电机电压更大）：</text>
+      <!-- 波形1 -->
+      <polyline points="20,80 120,80 120,50 260,50 260,80 400,80 400,50 540,50 540,80 660,80"
+        fill="none" stroke="#39d3c3" stroke-width="2"/>
+      <text x="20" y="110" fill="#39d3c3" font-size="11">占空比小</text>
+      <!-- 波形2 -->
+      <polyline points="20,135 60,135 60,105 540,105 540,135 660,135"
+        fill="none" stroke="#ffb454" stroke-width="2"/>
+      <text x="20" y="160" fill="#ffb454" font-size="11">占空比大</text>
+    </svg>
+    <p class="cap">图 4-1　同一个周期里，高电平宽度 = 占空比，决定电机平均电压</p>
+
+    <h3 class="sub" id="motor-api">4.3 代码接口</h3>
+    <pre><code><span class="kw">void</span> <span class="fn">App_PWM_Init</span>(<span class="kw">void</span>);            <span class="cm">// 初始化 STBY + 左右电机 + 两个定时器</span>
+<span class="kw">void</span> <span class="fn">App_PWM_Cmd</span>(<span class="kw">uint8_t</span> on);     <span class="cm">// 0=休眠, 非0=工作</span>
+<span class="kw">void</span> <span class="fn">App_PWM_Set_L</span>(<span class="kw">float</span> duty); <span class="cm">// duty: -100~+100，负=反转</span>
+<span class="kw">void</span> <span class="fn">App_PWM_Set_R</span>(<span class="kw">float</span> duty); <span class="cm">// duty: -100~+100</span></code></pre>
+    <div class="warn"><b>⚠ 易错：</b>占空比有符号，函数内部先取绝对值再算 CCR，再依据符号设置 AIN/BIN 电平。直接把负数塞进 CCR 会出乱子。</div>
+  </section>
+
+  <!-- ============ 五、编码器 ============ -->
+  <section id="encoder">
+    <h2 class="sec">📡 五、编码器测速</h2>
+    <p class="lead">电机自带霍尔编码器（11 对磁极，即每转 22 个脉冲）。用 <b>EXTI 外部中断双边沿</b>捕获 A 相边沿，累加“线值”。</p>
+
+    <h3 class="sub" id="enc-t">5.1 T 法原理</h3>
+    <p>M 法（固定时间数脉冲）和 T 法（固定 1 个脉冲测时间）本质都是“用平均速度近似瞬时速度”。本项目用 <b>T 法</b>：记录每次边沿的 <code>us</code> 时间戳，脉冲间隔 ΔT 内车走过的角度已知，速度 = 角度 / ΔT。</p>
+    <div class="box">
+      <b>单位换算链：</b><br>
+      线值 → 除以 <b>减速比 20.4</b> = 轮胎线值 → 除以 22 × 360° = 角度 → 对时间求导 = 角速度。<br>
+      正反转：A 相超前 B 相 90° 为正转；用 <code>direction</code> 变量（+1/-1）记录方向。
+    </div>
+
+    <h3 class="sub" id="enc-bug">5.2 三个经典坑（必看！）</h3>
+    <div class="warn"><b>🕳 坑1 · 速度不归零：</b>车停下后不再触发中断，t0/t1 不更新，速度永远停在最后一刻。<br>
+      <b>解法：</b>用 <code>max(t0 - t1, now - t0)</code>——宁可取更大时间间隔，保证停转时 ΔT 增大、速度趋近 0。</div>
+    <div class="warn"><b>🕳 坑2 · 换向点异常：</b>过零瞬间 direction 仍是 ±1，算出的速度不可能是 0，波形“直上直下”。<br>
+      <b>解法：</b>中断里检测换向（前后 direction 相反）时把 direction 记为 <b>±2</b>，速度函数遇到 ±2 直接返回 0。</div>
+    <div class="warn"><b>🕳 坑3 · 毛刺：</b>测速函数读 <code>now</code> 时被中断打断，篡改 t0/t1 导致 <code>now - t0</code> 溢出成大数，瞬间速度=0。<br>
+      <b>解法：</b>读 <code>now</code> 前<b>关中断</b>，拷贝好 t0/t1 再开中断，保证 now 永远 &gt; t0。</div>
+    <div class="tip"><b>✅ 关键字：</b>在中断和主循环都被修改的 <code>encoder</code> 变量务必加 <code>volatile</code>，防止编译器优化掉它。</div>
+  </section>
+
+  <!-- ============ 六、MPU6050 ============ -->
+  <section id="mpu">
+    <h2 class="sec">🧭 六、MPU6050 姿态解算</h2>
+    <p class="lead">MPU6050 内部集成陀螺仪 + 加速度计，通过 <b>软件 I²C（si2c）</b>与 MCU 通信，从机地址 <code>0xD0</code>。</p>
+
+    <h3 class="sub" id="mpu-2">6.1 双传感器：一个快一个稳</h3>
+    <div class="card-grid">
+      <div class="mini"><b>🌀 陀螺仪（角速度）</b><br>反应极快，但<b>有零点漂移</b>——积分角度会随时间越偏越多。</div>
+      <div class="mini"><b>📐 加速度计（加速度）</b><br>无累积误差（靠重力定向），但<b>怕震动</b>——电机一转全是噪声。</div>
+    </div>
+    <p>所以<b>谁也别单独用</b>：只用陀螺仪会慢慢倒下，只用加速度计会疯狂抖。对策是<b>互补滤波</b>。</p>
+
+    <h3 class="sub" id="mpu-cf">6.2 互补滤波</h3>
+    <div class="formula">Angle = 0.95238 × (Angle + Gyro × dt) + (1 − 0.95238) × Acc_Angle</div>
+    <p>左边 95% 信陀螺仪（管动态、快），右边 ~5% 信加速度计（管静态、纠漂移）。偏航角 yaw 所在平面与重力垂直，加速度计算不出，所以 yaw 只用陀螺仪积分。</p>
+    <div class="box"><b>量程换算（量完才是有意义的物理量）：</b><br>
+      陀螺仪：raw / 32768 × 2000 （单位 °/s，量程 ±2000°/s）<br>
+      加速度计：raw / 32768 × 2 （单位 g，量程 ±2g）<br>
+      加速度计解出的角度是 rad，还要 × 360/π 转成度。</div>
+
+    <h3 class="sub" id="mpu-code">6.3 工程实现要点</h3>
+    <ul>
+      <li><b>📅 固定周期：</b>用 <code>PERIODIC(5)</code> 宏，每 <b>5ms</b> 更新一次欧拉角，给积分/微分一个恒定时间基准（原理类似 <code>osDelayUntil</code>，自动补偿执行耗时，无累积误差）。</li>
+      <li><b>🧮 快速三角函数：</b>单片机算浮点三角慢，项目用 <code>qmath</code> <b>查表法</b>（1024 点/象限，诱导公式覆盖全周期）。姿态解算里的 <code>atan2</code> 必须用 <code>qatan2</code>，避免 <code>atan</code> 只有 ±90° 导致角度丢失。</li>
+      <li><b>🔌 通信：</b><code>My_SI2C_RegReadBytes / RegWriteBytes</code> 读写寄存器；数据寄存器高低 8 位拼接成 <code>int16_t</code>。</li>
+    </ul>
+  </section>
+
+  <!-- ============ 七、PID ============ -->
+  <section id="pid">
+    <h2 class="sec">🎛️ 七、PID 控制器</h2>
+    <p class="lead">源码：<code>my_lib/pid.c / pid.h</code>，一个<b>位置式离散 PID</b> 通用库，直立环和速度环都复用它。</p>
+
+    <h3 class="sub" id="pid-alg">7.1 算法结构</h3>
+    <p>结构体 <code>PID_TypeDef</code> 保存 Kp/Ki/Kd、设定值 SP、输出上下限，以及上次输入、上次误差、积分项、上次时间。</p>
+    <pre><code><span class="cm">// 位置式离散 PID（基于输入本身）</span>
+error   = SP - Input;
+Output  = Kp * error;                       <span class="cm">// 比例 P</span>
+<span class="kw">if</span>(非首次){
+  DTerm  = Kd * (LastInput - Input) / dt;   <span class="cm">// 微分 D（用输入差分，抗设定值突变）</span>
+  ITerm += Ki * (error + LastError) * 0.5 * dt; <span class="cm">// 积分 I（梯形面积累加）</span>
+  Output += DTerm + ITerm;
+}
+Output = 限幅(Output, 下限, 上限);</code></pre>
+    <div class="box"><b>稳 / 准 / 快 对应谁？</b><br>
+      <span class="pill">快 → P（偏差越大动力越猛）</span>
+      <span class="pill">准 → I（消除静差）</span>
+      <span class="pill">稳 → D（阻尼，防超调）</span></div>
+
+    <h3 class="sub" id="pid-imp">7.2 工程改进（库已内置）</h3>
+    <div class="mini"><b>① 输出限幅</b>：电机电压不可能无限，上下限设为 <b>±8.4V</b>（=电池电压）。超界就截断。</div>
+    <div class="mini"><b>② 积分限幅</b>：积分累加容易“跑飞”导致比例失效，积分项单独限幅在 ±8.4。</div>
+    <div class="mini"><b>③ 首次跳过 I/D</b>：第一次运行没有“上次数据”，靠 <code>LastTime == INVALID_TICK</code> 判断，只算 P。</div>
+    <div class="mini"><b>④ PID 复位</b>：按键启停时调 <code>PID_Reset()</code> 清掉 LastTime / ITerm，避免上一轮残值污染下一轮。</div>
+    <div class="tip"><b>✅ 两种入口：</b><code>PID_Compute1(Input)</code> 让库自己用输入差分算 D；<code>PID_Compute2(Input, dInputDt)</code> 由你直接喂微分值（传感器本身能测角速度时更准）。</div>
+  </section>
+
+  <!-- ============ 八、直立环 ============ -->
+  <section id="upright">
+    <h2 class="sec">🤸 八、直立环与倒立摆</h2>
+    <p>倒立摆的核心思想一句话：<b>用加速度去对抗倾角</b>。车往哪边倒，就往哪边加速，制造一个反向惯性力把它“撑”回来。</p>
+    <div class="formula">车身前倾 θ → 直立环输出“向前加速” → 惯性力把车身往后推 → 回到竖直</div>
+    <p>直立环就是包在速度环里面的<b>内环</b>：它只关心“角度对不对”，不管车到底是要停还是要走。调参时一般<b>先调直立环让它站稳</b>，再加速度环。</p>
+    <div class="warn"><b>⚠ 调参顺序：</b>先只开直立环（速度环设 0），把 P 加到能站住但有点抖，再加 D 压抖动，最后才碰速度环的 I。</div>
+  </section>
+
+  <!-- ============ 九、速度环 ============ -->
+  <section id="speed">
+    <h2 class="sec">⚡ 九、速度环与“速度环悖论”</h2>
+    <p>速度环调节车的<b>水平速度</b>。但它和直立环嵌套时会出现一个反直觉的现象——</p>
+    <div class="box"><b>🤯 速度环悖论：</b>想减速 → 速度环让车“向后加速” → 车因为后退而<b>前倾</b> → 直立环一看前倾，立刻“向前加速”扶正 → 结果速度反而<b>变快</b>了！越想减速越快。</div>
+    <p>根因：速度环和直立环都在抢同一个“加速度”，互相打架。解决方法是<b>把角速度拆成两份</b>：</p>
+    <div class="formula">ω = ω₁（维持平衡用，交给直立环）+ ω₂（加减速用，交给速度环）</div>
+    <div class="tip"><b>✅ 解法：</b>速度环只拿 <code>ω₂</code> 和设定值 SP 比较、输出修正量；由于维持平衡产生的 <code>ω₁</code> 和位移被“忽略”，速度环专心管速度、直立环专心管平衡，两者解耦。编码器测到的线速度（换算后）本身就是车的平动速度，直接作为速度环反馈即可。</div>
+  </section>
+
+  <!-- ============ 十、遥控 ============ -->
+  <section id="rc">
+    <h2 class="sec">📱 十、蓝牙遥控</h2>
+    <p class="lead">源码：<code>user/app_usart2.c</code> + <code>my_lib/usart.c</code> + <code>my_lib/str_cmd</code>。手机蓝牙发指令，经 USART3 进 MCU，MCU 再通过 USART2（921600 波特）把数据转给电脑调试助手。</p>
+    <div class="card-grid">
+      <div class="mini"><b>📥 接收</b><br>指令以 <code>\n</code> 结尾；RXNE 中断里逐字节写入 <b>intbuf</b>，遇到结束符拷贝到 <b>transbuf</b> 并置标志位。</div>
+      <div class="mini"><b>🔁 三缓冲</b><br>中断缓冲 → 中转缓冲 → 进程函数缓冲，避免中断打穿正在处理的字符串。</div>
+      <div class="mini"><b>🔍 解析</b><br>进程函数读标志位，<code>strncasecmp</code> 判断是不是 <code>move</code>，<code>sscanf</code> 取参数。</div>
+    </div>
+    <pre><code><span class="kw">if</span>(<span class="fn">sscanf</span>(cmdLine, <span class="str">"move %d %d"</span>, &amp;turn, &amp;move) == <span class="num">2</span>){
+   <span class="cm">// turn/move 范围 ±100，再映射成真实速度</span>
+}</code></pre>
+    <div class="tip"><b>✅ 注意：</b>发送端和接收端约定好“最大速度 100 对应真实最大速度”的映射比例；<code>strncasecmp</code> 的 <code>n</code> 表示只比前 n 个字符、<code>case</code> 表示不区分大小写，返回 0 即匹配。</div>
+  </section>
+
+  <!-- ============ 十一、支撑库 ============ -->
+  <section id="lib">
+    <h2 class="sec">🧰 十一、支撑库总览</h2>
+    <p>这些库是“积木”，换项目也能直接搬走：</p>
+    <table>
+      <tr><th>库</th><th>作用</th><th>关键接口 / 看点</th></tr>
+      <tr><td>🕒 task</td><td>周期性任务宏</td><td><code>PERIODIC(5)</code> 基于 <code>GetTick()</code> 的绝对周期，自动补偿，无累积误差</td></tr>
+      <tr><td>⏱️ delay</td><td>时基</td><td><code>GetTick()</code> ms、<code>GetUs()</code> μs，全项目时间基准</td></tr>
+      <tr><td>🔘 button</td><td>按键驱动</td><td>状态机消抖；支持单击/长按回调；本项目单击切换电机 STBY</td></tr>
+      <tr><td>🧮 qmath</td><td>快速三角函数</td><td>查表法 sin/cos/tan/atan2，替代慢速 <code>math.h</code></td></tr>
+      <tr><td>🔌 si2c</td><td>软件 I²C</td><td>任意 GPIO 模拟时序；<code>RegRead/WriteBytes</code> 操作 MPU6050 寄存器</td></tr>
+      <tr><td>🖥️ usart</td><td>串口助手</td><td><code>SendString / Printf / ReceiveLine</code>，调试回传与指令接收</td></tr>
+      <tr><td>📟 oled</td><td>SPI 显示屏</td><td>实时显示角度/速度/电压，调参时省电脑</td></tr>
+    </table>
+    <div class="box"><b>架构亮点：</b>所有“轮询型”任务都长这样——<code>Init()</code> 初始化硬件，<code>Proc()</code> 在 <code>while(1)</code> 里周期调用。主循环干净、可预测，没有阻塞，非常适合裸机平衡车。</div>
+  </section>
+
+  <!-- ============ 十二、时基与周期调度 ============ -->
+  <section id="timing">
+    <h2 class="sec">⏱️ 十二、时基与周期调度（延时 &amp; 宏）</h2>
+    <p class="lead">这是全项目的“心跳”：<code>delay</code> 负责回答“现在几点了”，<code>task.h</code> 里的宏负责“每隔多久干一次”。看懂这一章，你才能明白——姿态解算为什么必须每 <b>5ms</b> 跑一次、LED 快闪为什么用时间戳而不是 <code>delay</code> 死等。</p>
+
+    <h3 class="sub" id="timing-delay">12.1 延时实现细节</h3>
+    <p>时间基准来自 Cortex-M3 内核自带的 <b>SysTick</b>——一个 24 位递减计数器，时钟直接来自 HCLK（72 MHz）。它的玩法很简单：从一个数一直减到 0，减到 0 的瞬间触发一次中断，然后自动重新装填、接着再减，周而复始。</p>
+
+    <svg viewBox="0 0 680 175" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+      <text x="10" y="22" fill="#9aa7b8" font-size="12">SysTick 每个 1ms 减到 0 溢出一次，中断里让 ulTicks +1：</text>
+      <rect x="40" y="48" width="230" height="58" rx="8" fill="#16202e" stroke="#39d3c3" stroke-width="1.5"/>
+      <text x="155" y="74" fill="#cdd9e5" font-size="12" text-anchor="middle">VAL: 71999 → 0</text>
+      <text x="155" y="93" fill="#9aa7b8" font-size="11" text-anchor="middle">递减计数（耗时 1ms）</text>
+      <line x1="270" y1="77" x2="330" y2="77" stroke="#ff6b6b" stroke-width="2"/>
+      <text x="276" y="70" fill="#ff6b6b" font-size="10">溢出 → ulTicks++</text>
+      <rect x="330" y="48" width="230" height="58" rx="8" fill="#16202e" stroke="#39d3c3" stroke-width="1.5"/>
+      <text x="445" y="74" fill="#cdd9e5" font-size="12" text-anchor="middle">重装 71999 → 0</text>
+      <text x="445" y="93" fill="#9aa7b8" font-size="11" text-anchor="middle">下一个 1ms</text>
+      <rect x="500" y="124" width="160" height="40" rx="8" fill="#212a3a" stroke="#ffb454"/>
+      <text x="580" y="149" fill="#ffb454" font-size="12" text-anchor="middle">ulTicks 每 1ms + 1</text>
+    </svg>
+    <p class="cap">图 12-1　SysTick 溢出即“过了 1ms”，中断把 ulTicks 加 1，于是 ulTicks 就是“开机至今的毫秒数”</p>
+
+    <div class="card-grid">
+      <div class="mini"><b>🎯 LOAD = 71999</b><br>Delay_Init 把重装值设为 HCLK/1000 − 1 = 72000000/1000 − 1，刚好 <b>每 1ms 溢出一次</b>。</div>
+      <div class="mini"><b>⏫ ulTicks++</b><br>SysTick_Handler 检测 COUNTFLAG，溢出就 <code>ulTicks++</code>，毫秒时基由此而来。</div>
+      <div class="mini"><b>🔧 懒初始化</b><br>Delay_Init 用 flag 防重复配置；Delay / GetTick / GetUs 首次调用都会自动初始化。</div>
+    </div>
+
+    <h3 class="sub">四个接口，各管一摊</h3>
+    <table>
+      <tr><th>接口</th><th>作用</th><th>关键说明</th></tr>
+      <tr><td><code>GetTick()</code></td><td>当前时间（ms）</td><td>直接读 <code>ulTicks</code>，最常用；LED 快闪、PERIODIC 都靠它</td></tr>
+      <tr><td><code>Delay(ms)</code></td><td>毫秒级延时</td><td><b>死等</b>（轮询 ulTicks），会占住 CPU；<b>禁止在中断里调用</b></td></tr>
+      <tr><td><code>GetUs()</code></td><td>当前时间（μs）</td><td>毫秒 + VAL 折算微秒；读期间关中断防溢出错算</td></tr>
+      <tr><td><code>DelayUs(us)</code></td><td>微秒级延时</td><td>基于 GetUs 死等；短延时可用，长延时同样占 CPU</td></tr>
+    </table>
+
+    <div class="box"><b>🔍 微秒怎么来的？</b> SysTick 每 1ms 溢出，但内部 VAL 是连续递减的。微秒 = <code>ulTicks×1000 + (LOAD − VAL) × us_per_mini_tick</code>。其中 <code>us_per_mini_tick = 1000/(LOAD+1) ≈ 0.0139 μs/计数</code>，即 VAL 每减 1 代表约 0.0139 微秒。</div>
+
+    <pre><code><span class="cm">// GetUs() 核心：关中断保证“读毫秒 + 读计数”原子完成，</span>
+<span class="cm">// 若读的过程中刚好溢出（COUNTFLAG），补偿 ulTicks 再读一遍</span>
+<span class="fn">__disable_irq</span>();
+<span class="kw">while</span>(<span class="num">1</span>){
+  tick = ulTicks;
+  mini_tick = SysTick-&gt;VAL;
+  <span class="kw">if</span>(SysTick-&gt;CTRL &amp; SysTick_CTRL_COUNTFLAG) ulTicks++;
+  <span class="kw">else</span> <span class="kw">break</span>;
+}
+<span class="fn">__enable_irq</span>();</code></pre>
+
+    <div class="warn"><b>⚠ 为什么 Delay 不能乱用：</b> <code>Delay()</code> 是<b>阻塞</b>的——调用期间整个 <code>while(1)</code> 主循环卡住，姿态解算、电机控制、按键全停摆。所以裸机里“周期性干活”要用下面的 <b>PERIODIC 宏 + 时间戳</b>，而不是 <code>Delay</code>。笔记里 LED 快闪强调“不能用 delay”，根因就在这。</div>
+
+    <h3 class="sub" id="timing-macro">12.2 宏的原理</h3>
+    <p>宏（<code>#define</code>）本质是<b>编译前的“文本替换”</b>——预处理器先把宏名替换成定义体，再交给编译器。它<b>不是函数</b>，没有调用/返回开销，参数也不做类型检查。这个特点在裸机里特别香：</p>
+    <div class="card-grid">
+      <div class="mini"><b>⚡ 零开销</b><br>就地展开，没有函数调用压栈/跳转，适合高频执行路径。</div>
+      <div class="mini"><b>🔓 类型无关</b><br>一套 <code>min/max</code> 宏通吃 int / float，不用像函数那样为每个类型写一份。</div>
+      <div class="mini"><b>🧩 生成代码</b><br>用 <code>##</code> 连接符还能“拼”出变量名，实现带记忆的周期任务宏。</div>
+    </div>
+
+    <h3 class="sub">四个经典技巧（全用本项目真实宏举例）</h3>
+    <div class="mini" style="margin:12px 0"><b>① 给每个参数加括号 <code>( )</code></b>——防止运算符优先级踩坑。<br>
+      <code>PERIODIC_START</code> 里写 <code>NAME##_nxt += (T)</code>；si2c 里 <code>scl_w(v)</code> 写 <code>(v)?Bit_SET:Bit_RESET</code>。没有这对括号，<code>T</code> 若是 <code>a+1</code> 就会被错误结合。</div>
+    <div class="mini" style="margin:12px 0"><b>② <code>do{...}while(0)</code> 包裹多语句</b>——让宏像“一条语句”，避免 <code>if</code> 后接多语句的悬挂 else 问题。<br>
+      OLED 的交换宏就是范例：<code>#define swap(x,y) do{(x)=(x)+(y);(y)=(x)-(y);(x)=(x)-(y);}while(0)</code>。</div>
+    <div class="mini" style="margin:12px 0"><b>③ <code>##</code> 连接符（token paste）</b>——把参数拼进标识符。<br>
+      <code>PERIODIC_START(NAME,T)</code> 生成 <code>NAME##_nxt</code>，于是 <code>PERIODIC_START(motor,5)</code> 就是变量 <code>motor_nxt</code>。多个任务互不重名。</div>
+    <div class="mini" style="margin:12px 0"><b>④ 宏里藏 <code>static</code> 变量</b>——让“上次时间”自带记忆，调用点不必自己声明。<br>
+      <code>PERIODIC(T)</code> 内部 <code>static uint32_t nxt = 0;</code>，第一次调用后 nxt 就一直记住“下次该执行的时间”。</div>
+    <div class="warn" style="margin:12px 0"><b>🕳 坑⑤ · 参数多次求值</b>：宏是文本替换，参数会被展开<b>多次</b>。本项目 <code>min/max</code> 写成 <code>x1&gt;x2?x2:x1</code>，若你传 <code>min(a++, b)</code>，<code>a++</code> 会被执行两次而出错。记住：<b>宏参数别带副作用（++ / -- / 赋值）</b>。</div>
+
+    <h3 class="sub">本项目的三类宏</h3>
+    <table>
+      <tr><th>类别</th><th>宏</th><th>作用</th></tr>
+      <tr><td>🔁 周期任务</td><td><code>PERIODIC</code> / <code>PERIODIC_START</code> / <code>PERIODIC_END</code></td><td>基于 GetTick 实现“每 T 毫秒干一次”，不阻塞</td></tr>
+      <tr><td>🔌 位操作封装</td><td><code>scl_w / sda_w / scl_r / sda_r</code></td><td>把 GPIO 读写缩成一行，软件 I²C 时序更清爽</td></tr>
+      <tr><td>🧰 通用小工具</td><td><code>min / max / swap</code></td><td>类型无关的取最值 / 交换，OLED 绘图常用</td></tr>
+    </table>
+
+    <h3 class="sub">PERIODIC：裸机里的“定时调度器”</h3>
+    <p>笔记里写的 <code>period(5)</code>、<code>osDelayUntil</code>，在本项目裸机里就是这两个宏。它们都靠 <code>GetTick()</code> 判断是否“到点”，<b>到点才往下执行、没到就跳过/返回</b>，于是主循环不阻塞、还能保证周期恒定（自动补偿函数执行耗时，无累积误差）。</p>
+    <pre><code><span class="cm">/* 简化版：靠 return 提前退出 —— 只能在 void 函数里用，且一个函数只能用一次 */</span>
+<span class="kw">#define</span> PERIODIC(T) \
+<span class="kw">static</span> uint32_t nxt = <span class="num">0</span>; \
+<span class="kw">if</span>(<span class="fn">GetTick</span>() &lt; nxt) <span class="kw">return</span>; \
+nxt += (T);
+
+<span class="cm">/* 通用版：用 if{...} 大括号配对 —— 可在循环体里、可放多个命名任务 */</span>
+<span class="kw">#define</span> PERIODIC_START(NAME, T) \
+<span class="kw">static</span> uint32_t NAME##_nxt = <span class="num">0</span>; \
+<span class="kw">if</span>(<span class="fn">GetTick</span>() &gt;= NAME##_nxt) { \
+NAME##_nxt += (T);
+<span class="kw">#define</span> PERIODIC_END }</code></pre>
+
+    <pre><code><span class="cm">/* 用法示例：每 5ms 更新一次姿态，不会卡住主循环 */</span>
+<span class="kw">void</span> <span class="fn">Posture_Proc</span>(<span class="kw">void</span>){
+  PERIODIC_START(posture, <span class="num">5</span>);
+    <span class="cm">// ... 这里就是“每 5ms 才跑一次”的姿态解算代码 ...</span>
+  PERIODIC_END
+}</code></pre>
+
+    <div class="box"><b>两种写法怎么选？</b> <code>PERIODIC(T)</code> 把 <code>return</code> 塞进宏——简单但反模式（只能用于 void 函数、且一个函数只能有一个周期任务）；<code>PERIODIC_START/END</code> 用<b>配对大括号</b>绕开限制，可在函数体里放多个不同名的周期任务，更通用。本项目轮询型任务几乎都长这样：<code>Init()</code> 配硬件，<code>Proc()</code> 里套 PERIODIC 周期干活。</div>
+    <div class="tip"><b>✅ 溢出也安全：</b> <code>GetTick()</code> 返回 <code>uint32_t</code>，连续运行约 49 天会回绕到 0。但 <code>nxt += T</code> 同步回绕，在<b>无符号数回绕算术</b>下 <code>now &lt; nxt</code> 的比较依然成立，周期精度不受影响，不用额外处理。</div>
+  </section>
+
+  <!-- ============ 十三、调参实战步骤 ============ -->
+  <section id="tune">
+    <h2 class="sec">🎯 十三、调参实战步骤</h2>
+    <p class="lead">参数不是拍脑袋定的。平衡车调参有一条铁律——<b>“先让内环保住命（不倒），再让外环学会走”</b>。下面把笔记里的 PID 三指标（快/准/稳 对应 P/I/D）落成可操作的步骤，省得你每次重新踩坑。</p>
+
+    <h3 class="sub" id="tune-principle">13.1 总原则：先站稳，再会走</h3>
+    <p>双闭环里，<b>直立环是内环、保命</b>（不倒），<b>速度环是外环、管走</b>（按指令前进/后退）。调参顺序永远是从内到外，且每动一个参数前，先想清楚它管“快 / 准 / 稳”里的哪一个。</p>
+    <svg viewBox="0 0 680 120" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,sans-serif">
+      <defs><marker id="ar3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#5ad17a"/></marker></defs>
+      <rect x="14" y="44" width="116" height="44" rx="8" fill="#16202e" stroke="#5ad17a" stroke-width="1.5"/>
+      <text x="72" y="71" fill="#cdd9e5" font-size="12" text-anchor="middle">①机械中值</text>
+      <line x1="130" y1="66" x2="158" y2="66" stroke="#5ad17a" stroke-width="2" marker-end="url(#ar3)"/>
+      <rect x="160" y="44" width="116" height="44" rx="8" fill="#16202e" stroke="#5ad17a" stroke-width="1.5"/>
+      <text x="218" y="71" fill="#cdd9e5" font-size="12" text-anchor="middle">②直立环 P</text>
+      <line x1="276" y1="66" x2="304" y2="66" stroke="#5ad17a" stroke-width="2" marker-end="url(#ar3)"/>
+      <rect x="306" y="44" width="116" height="44" rx="8" fill="#16202e" stroke="#5ad17a" stroke-width="1.5"/>
+      <text x="364" y="71" fill="#cdd9e5" font-size="12" text-anchor="middle">③直立环 D</text>
+      <line x1="422" y1="66" x2="450" y2="66" stroke="#5ad17a" stroke-width="2" marker-end="url(#ar3)"/>
+      <rect x="452" y="44" width="116" height="44" rx="8" fill="#16202e" stroke="#5ad17a" stroke-width="1.5"/>
+      <text x="510" y="71" fill="#cdd9e5" font-size="12" text-anchor="middle">④速度环 I</text>
+      <line x1="568" y1="66" x2="596" y2="66" stroke="#5ad17a" stroke-width="2" marker-end="url(#ar3)"/>
+      <rect x="598" y="44" width="74" height="44" rx="8" fill="#16202e" stroke="#5ad17a" stroke-width="1.5"/>
+      <text x="635" y="71" fill="#cdd9e5" font-size="11" text-anchor="middle">⑤遥控</text>
+    </svg>
+    <p class="cap">图 13-1　调参顺序：机械中值 → 直立环 P → 直立环 D → 速度环 I → 遥控映射，层层递进</p>
+
+    <h3 class="sub" id="tune-steps">13.2 分步调参</h3>
+    <div class="mini" style="margin:12px 0"><b>① 机械中值标定</b><br>车竖直静置，读加速度计解出的角度作为“0°”基准。装歪会让车一直往一边倒，P/D 怎么调都救不回。</div>
+    <div class="mini" style="margin:12px 0"><b>② 只开直立环（速度环输出强制为 0）</b><br>调 <b>P</b>：从 0 慢慢加。P 太小→直接软倒；加到“颤颤巍巍能站住、轻推能回正但不稳”即可。P 越大回正越快（对应“快”）。<br>调 <b>D</b>：在 P 基础上加 D 作阻尼。抖动/超调明显→加大 D 压住；D 太大→反应迟钝发软。</div>
+    <div class="mini" style="margin:12px 0"><b>③ 开速度环（I）</b><br>只加 <b>I</b> 消静差，从很小开始，让车能保持匀速、消除“始终斜一个微小角度、电机嗡嗡回不到中位”。配合第九章“速度环悖论”——用 <code>ω₁/ω₂</code> 解耦，速度环只比较 <code>ω₁</code> 与设定值 SP，不抢直立环的加速度。</div>
+    <div class="mini" style="margin:12px 0"><b>④ 遥控映射</b><br><code>turn / move</code>（±100）按“最大速度 100 对应真实最大速度”的比例映射到差速与速度设定。</div>
+    <div class="mini" style="margin:12px 0"><b>⑤ 限位与复位</b><br>确认输出限幅 ±8.4；<code>user_key</code> 启停时调 <code>PID_Reset()</code> 清掉 LastTime / ITerm / LastError 残值，防上一轮污染下一轮。</div>
+    <div class="box"><b>口诀对照：</b>直立环管“不倒”——角度偏差多大就给多大扭力扶正；速度环管“走多快”——它不直接驱车，而是偷偷修改直立环的平衡点，让车为找回平衡而前进/后退（详见第八章、第九章）。</div>
+
+    <h3 class="sub" id="tune-table">13.3 现象 → 原因 → 调谁（速查表）</h3>
+    <p>笔记原话：<b>稳靠 D、准靠 I、快靠 P</b>；治震荡要“加大 D（增加阻尼）、减小 P”。落地成一张排查表：</p>
+    <table>
+      <tr><th>现象</th><th>根因</th><th>调哪个</th></tr>
+      <tr><td>一松手就往一边倒 / 软绵绵站不住</td><td>P 太小 或 机械中值错</td><td>加大 P / 重标中值</td></tr>
+      <tr><td>原地高频剧烈抖动</td><td>P 太大</td><td>减小 P，或加大 D</td></tr>
+      <tr><td>回正时左右晃好几下才停</td><td>D 太小（缺阻尼）</td><td>加大 D</td></tr>
+      <tr><td>始终斜一个角度、电机嗡嗡回不到中位</td><td>I 太小（静差）</td><td>加大 I</td></tr>
+      <tr><td>越想减速越快 / 前后拉扯</td><td>速度环悖论未解耦</td><td>检查 ω₁/ω₂ 拆分</td></tr>
+      <tr><td>推一下慢慢恢复但不快</td><td>P 偏小</td><td>略加 P</td></tr>
+    </table>
+    <div class="warn"><b>⚠ 调参铁律：</b>每次只动<b>一个</b>参数，改完就试。同时动 P 和 D 会互相掩盖，你永远不知道是哪个起作用。直立环站稳前，<b>绝对不要</b>开速度环——否则速度环悖论会让车“越想站住越乱跑”。</div>
+  </section>
+
+  <!-- ============ 附录 ============ -->
+  <section id="appendix">
+    <h2 class="sec">📌 附录：引脚与参数速查表</h2>
+    <h3 class="sub">A. 硬件引脚</h3>
+    <table>
+      <tr><th>功能</th><th>引脚</th><th>备注</th></tr>
+      <tr><td>TB6612 STBY</td><td>PA1</td><td>Out_PP</td></tr>
+      <tr><td>左电机 AIN1/AIN2</td><td>PA9 / PA10</td><td>Out_PP</td></tr>
+      <tr><td>左 PWM (TIM1_CH1)</td><td>PA8</td><td>AF_PP</td></tr>
+      <tr><td>右电机 BIN1/BIN2</td><td>PB5 / PB7</td><td>Out_PP</td></tr>
+      <tr><td>右 PWM (TIM4_CH4)</td><td>PB6</td><td>AF_PP</td></tr>
+      <tr><td>电池 ADC (CH8)</td><td>PB0</td><td>模拟输入，分压 3.3k/5.1k</td></tr>
+      <tr><td>电量 LED</td><td>PA4 / PA5 / PA6</td><td>Out_PP</td></tr>
+      <tr><td>用户按键</td><td>PA11</td><td>电机启停</td></tr>
+      <tr><td>调试串口 USART2</td><td>PA2(Tx) / PA3(Rx)</td><td>921600 波特</td></tr>
+      <tr><td>MPU6050 (软件I²C)</td><td>SCL/SDA 自定义</td><td>Addr 0xD0</td></tr>
+    </table>
+    <h3 class="sub">B. 关键参数</h3>
+    <table>
+      <tr><th>模块</th><th>参数</th><th>取值</th></tr>
+      <tr><td>PWM</td><td>ARR / PSC / 频率 / 分辨率</td><td>999 / 0 / 72 kHz / 1000</td></tr>
+      <tr><td>ADC</td><td>触发 / 分压比 / 换算</td><td>TIM2 TRGO 1ms / 5.1:(3.3+5.1) / ×8.4</td></tr>
+      <tr><td>MPU6050</td><td>陀螺量程 / 加速度量程 / 滤波α / 周期</td><td>±2000°/s / ±2g / 0.95238 / 5 ms</td></tr>
+      <tr><td>编码器</td><td>磁极 / 线数 / 减速比</td><td>11 对 / 22 / 20.4</td></tr>
+      <tr><td>PID</td><td>输出限幅 / 积分限幅</td><td>±8.4 V / ±8.4</td></tr>
+      <tr><td>USART2</td><td>波特率</td><td>921600</td></tr>
+    </table>
+    <div class="tip"><b>🚀 复用建议：</b>做新车型时，复制 <code>user/</code> 改写引脚与电机参数，<code>my_lib/</code> 几乎原封不动。调参顺序永远是：<b>直立环 P→D → 速度环 I → 输出限幅</b>。先站稳，再会走。</div>
+  </section>
+
+  <footer>
+    📝 本文档由项目源码（user/、my_lib/）与你的设计笔记《Balance Car.md》综合整理 · 单文件离线可读 · 更新于 2026-09-11
+  </footer>
+
+</div>
+
+<script>
+  // ---------- 回到顶部 ----------
+  const topBtn = document.getElementById('topBtn');
+  window.addEventListener('scroll', () => {
+    topBtn.style.display = window.scrollY > 400 ? 'block' : 'none';
+  });
+  topBtn.addEventListener('click', () => window.scrollTo({top:0, behavior:'smooth'}));
+
+  // ---------- 目录展开 / 滚动高亮 ----------
+  const toc = document.getElementById('toc');
+  const l1 = [...toc.querySelectorAll('.l1')];
+  const allLinks = [...toc.querySelectorAll('a')];
+  const sections = l1.map(li => document.querySelector(li.querySelector('a').getAttribute('href')));
+
+  // 点击一级标题展开/收起二级
+  l1.forEach(li => {
+    const mainA = li.querySelector('a');
+    mainA.addEventListener('click', () => {
+      if (li.querySelector('.l2')) li.classList.toggle('open');
+    });
+    if (li.querySelector('.l2')) li.classList.add('open'); // 默认展开
+  });
+
+  const setActive = (id) => {
+    allLinks.forEach(a => a.classList.remove('active'));
+    const link = allLinks.find(a => a.getAttribute('href') === '#' + id);
+    if (link){ link.classList.add('active'); link.closest('.l1')?.classList.add('open'); }
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) setActive(e.target.id);
+    });
+  }, {rootMargin: '-10% 0px -75% 0px', threshold: 0});
+
+  sections.forEach(s => s && observer.observe(s));
+</script>
+</body>
+</html>
