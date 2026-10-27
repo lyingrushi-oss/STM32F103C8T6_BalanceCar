@@ -197,7 +197,7 @@
             <RoSelD>3</RoSelD>
             <RwSelD>3</RwSelD>
             <CodeSel>0</CodeSel>
-            <OptFeed>0</OptFeed>
+            <OptFeed>1</OptFeed>
             <NoZi1>0</NoZi1>
             <NoZi2>0</NoZi2>
             <NoZi3>0</NoZi3>
@@ -445,6 +445,16 @@
               <FilePath>.\user\app_pwm.h</FilePath>
             </File>
             <File>
+              <FileName>app_mpu6050.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\app_mpu6050.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_mpu6050.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\app_mpu6050.h</FilePath>
+            </File>
+            <File>
               <FileName>app_encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\user\app_encoder.c</FilePath>
@@ -453,6 +463,26 @@
               <FileName>app_encoder.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\user\app_encoder.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\app_motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_motor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\app_motor.h</FilePath>
+            </File>
+            <File>
+              <FileName>app_pid.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\user\app_pid.c</FilePath>
+            </File>
+            <File>
+              <FileName>app_pid.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\user\app_pid.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -794,16 +824,6 @@
               <FileType>1</FileType>
               <FilePath>.\my_lib\qmath.c</FilePath>
             </File>
-            <File>
-              <FileName>pid.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>.\my_lib\pid.h</FilePath>
-            </File>
-            <File>
-              <FileName>pid.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\my_lib\pid.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
@@ -830,14 +850,34 @@
               <FilePath>.\test\pwm_test.h</FilePath>
             </File>
             <File>
-              <FileName>encoder_test.c</FileName>
+              <FileName>mpu6050_test.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\test\encoder_test.c</FilePath>
+              <FilePath>.\test\mpu6050_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>mpu6050_test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\test\mpu6050_test.h</FilePath>
+            </File>
+            <File>
+              <FileName>qmath_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\test\qmath_test.c</FilePath>
+            </File>
+            <File>
+              <FileName>qmath_test.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\test\qmath_test.h</FilePath>
             </File>
             <File>
               <FileName>encoder_test.h</FileName>
               <FileType>5</FileType>
               <FilePath>.\test\encoder_test.h</FilePath>
+            </File>
+            <File>
+              <FileName>encoder_test.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\test\encoder_test.c</FilePath>
             </File>
           </Files>
         </Group>

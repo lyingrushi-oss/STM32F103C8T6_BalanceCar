@@ -39,6 +39,7 @@ if(clicks==1)//单击时才处理
 	 {pwm_on=1;}
 	 else
 	 {pwm_on=0;}
+	//App_PWM_Cmd(pwm_on);
 	 App_PWM_Cmd(pwm_on);
 	 
  
